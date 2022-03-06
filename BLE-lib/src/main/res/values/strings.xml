@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">BLE-lib</string>
+    <string name="devices">Bluetooth LE Devices</string>
+
+
+    <string name="location_denied_title">Location permission denied</string>
+    <string name="location_denied_message">As location permission has not been granted, this app cannot scan for Bluetooth LE devices.</string>
+    <string name="pairing_request">PAIRING requested\n-> Perform pairing steps. Connect again</string>
+
+</resources>
