@@ -4,7 +4,7 @@ plugins {
     id 'maven-publish'
 }
 group = 'com.github.Amir-yazdanmanesh'
-version = '1.0.3'
+version = '1.0.5'
 android {
     compileSdk 31
 
@@ -42,7 +42,7 @@ afterEvaluate {
                 // You can then customize attributes of the publication as shown below.
                 groupId = 'com.github.Amir-yazdanmanesh'
                 artifactId = 'Bluetooth-Low-Energy-Terminal-Android-BLE-Library'
-                version = '1.0.3'
+                version = '1.0.5'
             }
 
         }

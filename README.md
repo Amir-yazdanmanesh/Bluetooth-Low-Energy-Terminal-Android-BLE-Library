@@ -37,7 +37,7 @@ Add the dependency
 
 ```
 dependencies {
-    implementation 'com.github.Amir-yazdanmanesh:Bluetooth-Low-Energy-Terminal-Android-BLE-Library:1.0.1'
+    implementation 'com.github.Amir-yazdanmanesh:Bluetooth-Low-Energy-Terminal-Android-BLE-Library:1.0.5'
 	}
 
 ```
