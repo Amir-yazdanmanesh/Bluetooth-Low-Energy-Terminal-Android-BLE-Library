@@ -1,5 +1,6 @@
 # Bluetooth Low Energy Terminal
 [![](https://jitpack.io/v/Amir-yazdanmanesh/Bluetooth-Low-Energy-Terminal-Android-BLE-Library.svg)](https://jitpack.io/#Amir-yazdanmanesh/Bluetooth-Low-Energy-Terminal-Android-BLE-Library) [![android Status](https://img.shields.io/badge/platform-Android-yellow.svg)](https://www.android.com/)
+
 This Android app provides a line-oriented terminal / console for Bluetooth LE (4.x) devices implementing a custom serial profile
 For an overview on Android BLE communication see [Android Bluetooth LEOverview](https://developer.android.com/guide/topics/connectivity/bluetooth/ble-overview).
 
@@ -37,7 +38,7 @@ Add the dependency
 
 ```
 dependencies {
-    implementation 'com.github.Amir-yazdanmanesh:Bluetooth-Low-Energy-Terminal-Android-BLE-Library:1.0.5'
+    implementation 'com.github.Amir-yazdanmanesh:Bluetooth-Low-Energy-Terminal-Android-BLE-Library:1.0.6'
 	}
 
 ```
