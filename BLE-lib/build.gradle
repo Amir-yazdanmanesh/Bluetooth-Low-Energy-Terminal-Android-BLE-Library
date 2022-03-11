@@ -12,7 +12,11 @@ android {
         minSdk 21
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-
+    lintOptions {
+        textOutput 'stdout'
+        textReport true
+        lintConfig rootProject.file('lint.xml')
+    }
     buildTypes {
         release {
             minifyEnabled false
@@ -27,6 +31,7 @@ android {
         jvmTarget = '1.8'
     }
 }
+
 afterEvaluate {
     publishing {
         publications {
