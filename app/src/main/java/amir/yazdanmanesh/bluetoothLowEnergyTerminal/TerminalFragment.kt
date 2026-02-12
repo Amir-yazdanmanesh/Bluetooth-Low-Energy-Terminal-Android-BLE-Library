@@ -1,46 +1,57 @@
 package amir.yazdanmanesh.bluetoothLowEnergyTerminal
 
-import amir.yazdanmanesh.ble_lib.*
-import android.app.Activity
+import amir.yazdanmanesh.ble_lib.SerialListener
+import amir.yazdanmanesh.ble_lib.SerialService
+import amir.yazdanmanesh.ble_lib.SerialSocket
+import amir.yazdanmanesh.ble_lib.TextUtil
+import android.annotation.SuppressLint
 import android.app.AlertDialog
-import android.bluetooth.BluetoothAdapter
-import android.content.*
+import android.bluetooth.BluetoothManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.method.ScrollingMovementMethod
 import android.text.style.ForegroundColorSpan
-import android.view.*
-import android.widget.TextView
+import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
-import java.util.*
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import amir.yazdanmanesh.bluetoothLowEnergyTerminal.databinding.FragmentTerminalBinding
 
-class TerminalFragment : Fragment(), ServiceConnection,
-    SerialListener {
-    private enum class Connected {
-        False, Pending, True
-    }
+@SuppressLint("MissingPermission")
+class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
+
+    private enum class Connected { False, Pending, True }
+
+    private var _binding: FragmentTerminalBinding? = null
+    private val binding get() = _binding!!
+
+    private val viewModel: TerminalViewModel by viewModels()
 
     private var deviceAddress: String? = null
     private var service: SerialService? = null
-    lateinit var receiveText: TextView
-    lateinit var sendText: TextView
     private var hexWatcher: TextUtil.HexWatcher? = null
     private var connected = Connected.False
-    private var initialStart = true
-    private var hexEnabled = false
     private var pendingNewline = false
-    private var newline: String = TextUtil.newline_crlf
 
     /*
      * Lifecycle
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
-        retainInstance = true
         deviceAddress = requireArguments().getString("device")
     }
 
@@ -53,12 +64,7 @@ class TerminalFragment : Fragment(), ServiceConnection,
     override fun onStart() {
         super.onStart()
         service?.attach(this)
-            ?: requireActivity().startService(
-                Intent(
-                    activity,
-                    SerialService::class.java
-                )
-            ) // prevents service destroy on unbind from recreated activity caused by orientation change
+            ?: requireActivity().startService(Intent(activity, SerialService::class.java))
     }
 
     override fun onStop() {
@@ -66,10 +72,10 @@ class TerminalFragment : Fragment(), ServiceConnection,
         super.onStop()
     }
 
-    override fun onAttach(activity: Activity) {
-        super.onAttach(activity)
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
         requireActivity().bindService(
-            Intent(getActivity(), SerialService::class.java),
+            Intent(activity, SerialService::class.java),
             this,
             Context.BIND_AUTO_CREATE
         )
@@ -78,15 +84,15 @@ class TerminalFragment : Fragment(), ServiceConnection,
     override fun onDetach() {
         try {
             requireActivity().unbindService(this)
-        } catch (ignored: Exception) {
+        } catch (_: Exception) {
         }
         super.onDetach()
     }
 
     override fun onResume() {
         super.onResume()
-        if (initialStart && service != null) {
-            initialStart = false
+        if (viewModel.uiState.value.initialStart && service != null) {
+            viewModel.consumeInitialStart()
             requireActivity().runOnUiThread { connect() }
         }
     }
@@ -94,8 +100,7 @@ class TerminalFragment : Fragment(), ServiceConnection,
     override fun onServiceConnected(name: ComponentName, binder: IBinder) {
         service = (binder as SerialService.SerialBinder).getService()
         service!!.attach(this)
-        if (initialStart && isResumed) {
-            initialStart = false
+        if (viewModel.consumeInitialStart() && isResumed) {
             requireActivity().runOnUiThread { connect() }
         }
     }
@@ -111,61 +116,69 @@ class TerminalFragment : Fragment(), ServiceConnection,
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        val view = inflater.inflate(R.layout.fragment_terminal, container, false)
-        receiveText = view.findViewById(R.id.receive_text) // TextView performance decreases with number of spans
-        receiveText.setTextColor(resources.getColor(R.color.colorRecieveText)) // set as default color to reduce number of spans
-        receiveText.setMovementMethod(ScrollingMovementMethod.getInstance())
-        sendText = view.findViewById(R.id.send_text)
-        hexWatcher = TextUtil.HexWatcher(sendText)
+    ): View {
+        _binding = FragmentTerminalBinding.inflate(inflater, container, false)
+
+        val hexEnabled = viewModel.uiState.value.hexEnabled
+        binding.receiveText.setTextColor(ContextCompat.getColor(requireContext(), R.color.colorRecieveText))
+        binding.receiveText.movementMethod = ScrollingMovementMethod.getInstance()
+
+        hexWatcher = TextUtil.HexWatcher(binding.sendText)
         hexWatcher!!.enable(hexEnabled)
-        sendText.addTextChangedListener(hexWatcher)
-        sendText.setHint(if (hexEnabled) "HEX mode" else "")
-        val sendBtn = view.findViewById<View>(R.id.send_btn)
-        sendBtn.setOnClickListener { v: View? ->
-            send(
-                sendText.getText().toString()
-            )
+        binding.sendText.addTextChangedListener(hexWatcher)
+        binding.sendText.hint = if (hexEnabled) "HEX mode" else ""
+
+        binding.sendBtn.setOnClickListener {
+            send(binding.sendText.text.toString())
         }
-        return view
+        return binding.root
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_terminal, menu)
-        menu.findItem(R.id.hex).isChecked = hexEnabled
-    }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val id = item.itemId
-        return if (id == R.id.clear) {
-            receiveText!!.text = ""
-            true
-        } else if (id == R.id.newline) {
-            val newlineNames = resources.getStringArray(R.array.newline_names)
-            val newlineValues = resources.getStringArray(R.array.newline_values)
-            val pos = Arrays.asList(*newlineValues).indexOf(newline)
-            val builder = AlertDialog.Builder(
-                activity
-            )
-            builder.setTitle("Newline")
-            builder.setSingleChoiceItems(
-                newlineNames, pos
-            ) { dialog: DialogInterface, item1: Int ->
-                newline = newlineValues[item1]
-                dialog.dismiss()
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.menu_terminal, menu)
+                menu.findItem(R.id.hex).isChecked = viewModel.uiState.value.hexEnabled
             }
-            builder.create().show()
-            true
-        } else if (id == R.id.hex) {
-            hexEnabled = !hexEnabled
-            sendText.text = ""
-            hexWatcher!!.enable(hexEnabled)
-            sendText.hint = if (hexEnabled) "HEX mode" else ""
-            item.isChecked = hexEnabled
-            true
-        } else {
-            super.onOptionsItemSelected(item)
-        }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.clear -> {
+                        binding.receiveText.text = ""
+                        true
+                    }
+                    R.id.newline -> {
+                        val newlineNames = resources.getStringArray(R.array.newline_names)
+                        val newlineValues = resources.getStringArray(R.array.newline_values)
+                        val pos = newlineValues.indexOf(viewModel.uiState.value.newline)
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Newline")
+                            .setSingleChoiceItems(newlineNames, pos) { dialog, item ->
+                                viewModel.setNewline(newlineValues[item])
+                                dialog.dismiss()
+                            }
+                            .create().show()
+                        true
+                    }
+                    R.id.hex -> {
+                        val hexEnabled = viewModel.toggleHex()
+                        binding.sendText.text = null
+                        hexWatcher!!.enable(hexEnabled)
+                        binding.sendText.hint = if (hexEnabled) "HEX mode" else ""
+                        menuItem.isChecked = hexEnabled
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     /*
@@ -173,8 +186,8 @@ class TerminalFragment : Fragment(), ServiceConnection,
      */
     private fun connect() {
         try {
-            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-            val device = bluetoothAdapter.getRemoteDevice(deviceAddress)
+            val btManager = requireContext().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            val device = btManager.adapter.getRemoteDevice(deviceAddress)
             status("connecting...")
             connected = Connected.Pending
             val socket = SerialSocket(requireActivity().applicationContext, device)
@@ -195,31 +208,25 @@ class TerminalFragment : Fragment(), ServiceConnection,
             return
         }
         try {
+            val state = viewModel.uiState.value
             val msg: String
             val data: ByteArray
-            if (hexEnabled) {
+            if (state.hexEnabled) {
                 val sb = StringBuilder()
                 TextUtil.toHexString(sb, TextUtil.fromHexString(str))
-                TextUtil.toHexString(sb, newline.toByteArray())
+                TextUtil.toHexString(sb, state.newline.toByteArray())
                 msg = sb.toString()
                 data = TextUtil.fromHexString(msg)
             } else {
                 msg = str
-                data = (str + newline).toByteArray()
+                data = (str + state.newline).toByteArray()
             }
-            val spn = SpannableStringBuilder(
-                """
-                      $msg
-                      
-                      """.trimIndent()
-            )
+            val spn = SpannableStringBuilder("$msg\n")
             spn.setSpan(
-                ForegroundColorSpan(resources.getColor(R.color.colorSendText)),
-                0,
-                spn.length,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                ForegroundColorSpan(ContextCompat.getColor(requireContext(), R.color.colorSendText)),
+                0, spn.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
-            receiveText!!.append(spn)
+            binding.receiveText.append(spn)
             service!!.write(data)
         } catch (e: Exception) {
             onSerialIoError(e)
@@ -227,59 +234,51 @@ class TerminalFragment : Fragment(), ServiceConnection,
     }
 
     private fun receive(data: ByteArray) {
-        if (hexEnabled) {
-            receiveText!!.append(TextUtil.toHexString(data) + '\n')
+        val state = viewModel.uiState.value
+        if (state.hexEnabled) {
+            binding.receiveText.append(TextUtil.toHexString(data) + '\n')
         } else {
             var msg = String(data)
-            if (newline == TextUtil.newline_crlf && msg.length > 0) {
-                // don't show CR as ^M if directly before LF
+            if (state.newline == TextUtil.newline_crlf && msg.isNotEmpty()) {
                 msg = msg.replace(TextUtil.newline_crlf, TextUtil.newline_lf)
-                // special handling if CR and LF come in separate fragments
                 if (pendingNewline && msg[0] == '\n') {
-                    val edt = receiveText.editableText
+                    val edt = binding.receiveText.editableText
                     if (edt != null && edt.length > 1) edt.replace(edt.length - 2, edt.length, "")
                 }
                 pendingNewline = msg[msg.length - 1] == '\r'
             }
-            receiveText!!.append(TextUtil.toCaretString(msg, newline.length != 0))
+            binding.receiveText.append(TextUtil.toCaretString(msg, state.newline.isNotEmpty()))
         }
     }
 
     private fun status(str: String) {
-        val spn = SpannableStringBuilder(
-            """
-                  $str
-                  
-                  """.trimIndent()
-        )
+        val spn = SpannableStringBuilder("$str\n")
         spn.setSpan(
-            ForegroundColorSpan(resources.getColor(R.color.colorStatusText)),
-            0,
-            spn.length,
-            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            ForegroundColorSpan(ContextCompat.getColor(requireContext(), R.color.colorStatusText)),
+            0, spn.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
-        receiveText!!.append(spn)
+        binding.receiveText.append(spn)
     }
 
     /*
      * SerialListener
      */
-   override fun onSerialConnect() {
+    override fun onSerialConnect() {
         status("connected")
         connected = Connected.True
     }
 
-    override fun onSerialConnectError(e: Exception?) {
-        status("connection failed: " + e!!.message)
+    override fun onSerialConnectError(e: Exception) {
+        status("connection failed: " + e.message)
         disconnect()
     }
 
-    override fun onSerialRead(data: ByteArray?) {
-        receive(data!!)
+    override fun onSerialRead(data: ByteArray) {
+        receive(data)
     }
 
-    override fun onSerialIoError(e: Exception?) {
-        status("connection lost: " + e!!.message)
+    override fun onSerialIoError(e: Exception) {
+        status("connection lost: " + e.message)
         disconnect()
     }
 }

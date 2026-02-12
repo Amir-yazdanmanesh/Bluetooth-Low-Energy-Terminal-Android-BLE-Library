@@ -1,9 +1,15 @@
 <resources>
     <string name="app_name">Bluetooth Low Energy Terminal</string>
+    <string name="devices">Bluetooth LE Devices</string>
 
     <string name="location_permission_title">Location permission required</string>
     <string name="location_permission_message">This app does not use location information, but scanning for Bluetooth LE devices requires this permission</string>
     <string name="location_denied_title">Location permission denied</string>
     <string name="location_denied_message">As location permission has not been granted, this app cannot scan for Bluetooth LE devices.</string>
+
+    <string name="bluetooth_permission_title">Bluetooth permission required</string>
+    <string name="bluetooth_permission_message">Scanning and connecting to Bluetooth LE devices requires Bluetooth permissions</string>
+    <string name="bluetooth_denied_title">Bluetooth permission denied</string>
+    <string name="bluetooth_denied_message">As Bluetooth permission has not been granted, this app cannot scan for or connect to Bluetooth LE devices.</string>
 
 </resources>

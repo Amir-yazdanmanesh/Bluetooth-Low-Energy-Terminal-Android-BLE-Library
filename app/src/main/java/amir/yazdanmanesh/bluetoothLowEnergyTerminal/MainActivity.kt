@@ -2,19 +2,26 @@ package amir.yazdanmanesh.bluetoothLowEnergyTerminal
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.FragmentManager
-
+import amir.yazdanmanesh.bluetoothLowEnergyTerminal.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedListener {
+
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
         supportFragmentManager.addOnBackStackChangedListener(this)
-        if (savedInstanceState == null) supportFragmentManager.beginTransaction()
-            .add(R.id.fragment, DevicesFragment(), "devices").commit() else onBackStackChanged()
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .add(R.id.fragment, DevicesFragment(), "devices")
+                .commit()
+        } else {
+            onBackStackChanged()
+        }
     }
 
     override fun onBackStackChanged() {
@@ -22,7 +29,7 @@ class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedList
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
+        supportFragmentManager.popBackStack()
         return true
     }
 }
