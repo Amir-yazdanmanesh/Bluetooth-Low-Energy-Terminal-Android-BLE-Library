@@ -6,16 +6,16 @@ plugins {
 group = 'com.github.Amir-yazdanmanesh'
 version = '1.0.6'
 android {
-    compileSdk 31
+    namespace "amir.yazdanmanesh.ble_lib"
+    compileSdk 35
 
     defaultConfig {
         minSdk 21
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    lintOptions {
-        textOutput 'stdout'
+    lint {
+        textOutput = file('stdout')
         textReport true
-        lintConfig rootProject.file('lint.xml')
     }
     buildTypes {
         release {
@@ -24,11 +24,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        buildConfig true
     }
 }
 
@@ -49,7 +52,6 @@ afterEvaluate {
     }
 }
 dependencies {
-
-    implementation 'androidx.core:core-ktx:1.7.0'
-
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 }
