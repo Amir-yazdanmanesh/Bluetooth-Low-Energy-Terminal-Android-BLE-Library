@@ -61,4 +61,4 @@ dependencies {
 ```
 
 ## Preview
-![](https://s23.picofile.com/file/8448095584/ezgif_com_gif_maker.gif)
+![Preview](screen/ezgif_com_gif_maker.gif)
