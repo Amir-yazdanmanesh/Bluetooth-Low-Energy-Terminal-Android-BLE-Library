@@ -15,6 +15,9 @@ This app includes UUIDs for widely used serial profiles:
 - Support custom scan rules
 - Support multi device connections
 - Support configuration timeout for connect or operation
+- MVVM architecture with ViewModel and StateFlow
+- Full Kotlin codebase (BLE library converted from Java to Kotlin)
+- RecyclerView with ListAdapter and DiffUtil for efficient device list rendering
 
 ## Tech Stack
 | Component | Version |
@@ -25,6 +28,7 @@ This app includes UUIDs for widely used serial profiles:
 | compileSdk / targetSdk | 35 |
 | minSdk | 21 |
 | Java (toolchain) | 17 |
+| App Version | 2.0 |
 
 - **BLE-lib** — Pure Kotlin library, no UI dependencies
 - **App** — ViewBinding, ViewModel + StateFlow, Coroutines, RecyclerView with ListAdapter/DiffUtil
@@ -52,7 +56,7 @@ Add the dependency:
 
 ```groovy
 dependencies {
-    implementation 'com.github.Amir-yazdanmanesh:Bluetooth-Low-Energy-Terminal-Android-BLE-Library:1.0.6'
+    implementation 'com.github.Amir-yazdanmanesh:Bluetooth-Low-Energy-Terminal-Android-BLE-Library:2.0.0'
 }
 ```
 
